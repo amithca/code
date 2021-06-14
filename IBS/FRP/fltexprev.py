@@ -30,9 +30,46 @@ def get_Connection(host, port, database, user, password):
     return conn
 
 
+def clear_postgre_tbl(tblnam, conn):
+    qry = "TRUNCATE TABLE " + str(tblnam)
+    curr = conn.cursor()
+    curr.execute(qry)
+    conn.commit()
+    print("Executed:" + qry)
+    curr.close()
+
+
+def write_to_postgre(df, index, tblnam):
+    conn = get_Connection(host, port, database, user, password)
+    if len(df) > 0:
+        df = df.set_index(index)
+        pk = ','.join(list(df.index.names))
+        col1 = ','.join(list(df.columns))
+        col2 = ','.join(list(['EXCLUDED.' + str(col) for col in df.columns]))
+        df = df.reset_index()
+        tuples = [tuple(x) for x in df.to_numpy()]
+        cols = ','.join(list(df.columns))
+        vals = ','.join(list(['%s' for i in range(len(df.columns))]))
+        qry = "INSERT INTO %s(%s) VALUES(%s) ON CONFLICT(%s) DO UPDATE SET (%s) = (%s)" % (
+        tblnam, cols, vals, pk, col1, col2)
+        print("qry=", qry)
+    cursor = conn.cursor()
+    try:
+        psycopg2.extras.execute_batch(cursor, qry, tuples)
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as e:
+        print("Error: ", str(e))
+        result_exception = str(e)
+        conn.rollback()
+    finally:
+        cursor.close()
+
+
 def pop_Segrto(con, bkgdta):
     tbl_col_lst = ['cmpcod', 'exedat', 'fltnum', 'segorg', 'segdst', 'sumchgwgtseg', 'sumchgwgtflt', 'rto', 'datper',
                    'crmlstupdtim', 'fltrou']
+    tblnam = "crmfltexprevfctsegrto"
+    tbl_pk = ["cmpcod", "fltnum", "segorg", "segdst"]
     try:
         cur_date = exedat.strftime('%Y-%m-%d')
         print(cur_date)
@@ -124,9 +161,12 @@ def pop_Segrto(con, bkgdta):
         segrto_out.loc[:, 'crmlstupdtim'] = datetime.datetime.now().strftime('%d-%b-%Y %H:%M:%S')
         segrto_out = segrto_out[tbl_col_lst]
 
-        print('Output:\nsegrto_out.head=\n', segrto_out.head())
+        print('Output:\nsegrto_out.head=\n', segrto_out[segrto_out['datper'] == 'EQL'].head())
         print('segrto_out.columns=\n', segrto_out.columns)
         print('segrto_out.count=\n', len(segrto_out))
+
+        clear_postgre_tbl(tblnam, conn)
+        write_to_postgre(segrto_out, tbl_pk, tblnam)
 
     except Exception as e:
         print("Exception in pop_Segrto() : " + str(e))
@@ -148,3 +188,5 @@ try:
     pop_Segrto(conn, df_bkg)
 except Exception as e:
     print("Error in main: " + str(e))
+finally:
+    conn.close()
