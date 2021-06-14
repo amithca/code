@@ -1,0 +1,3 @@
+Consider the data roadNet-CA.txt, which shows the road network data from California.
+
+The graph constructed using the data from roadNet-CA.txt is shown below, which serves as the input graph to our algorithms.

@@ -1,0 +1,6 @@
+BFS finds the shortest path to the destination whereas DFS goes to the bottom of a subtree, then backtracks.
+The full form of BFS is Breadth-First Search while the full form of DFS is Depth First Search.
+BFS uses a queue to keep track of the next location to visit. whereas DFS uses a stack to keep track of the next location to visit.
+BFS traverses according to tree level while DFS traverses according to tree depth.
+BFS is implemented using FIFO list on the other hand DFS is implemented using LIFO list.
+In BFS, you can never be trapped into finite loops whereas in DFS you can be trapped into infinite loops.

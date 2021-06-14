@@ -1,0 +1,2 @@
+Big-O notation, sometimes called asymptotic notation, is a mathematical notation that describes the limiting behavior of a function when the argument tends towards a particular value or infinity.
+In computer science, Big-O notation is used to classify algorithms according to how their running time or space requirements grow as the input size (n) grows. This notation characterizes functions according to their growth rates: different functions with the same growth rate may be represented using the same O notation.
