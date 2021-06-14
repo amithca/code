@@ -1,0 +1,259 @@
+---
+title: "2020MCS120003_LabAssignment02"
+author: "Amith C A"
+date: "06/09/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## DSC513 Lab Assignment 2
+
+06/09/2020
+
+#### 1. What output will the following r code produce?
+Code:
+```{r echo=TRUE,eval=FALSE}
+x<-c(TRUE,FALSE,0L)
+typeof(x)
+```
+#### Ans:
+The output will be:
+```{r echo=FALSE,eval=TRUE}
+x<-c(TRUE,FALSE,0L)
+typeof(x)
+```
+The typeof(),will print the type of c. The output will be "integer".The data type of the c() is integer as '0L' is an element. The L is used to specify the value of 0 as integer.
+
+#### 2. What output will the following r code produce?
+Code:
+```{r echo=TRUE,eval=FALSE}
+TRUE | NA
+```
+#### Ans:
+The output will be :
+```{r echo=FALSE,eval=TRUE}
+TRUE | NA
+```
+The **|** is logical pipe which performs the logical OR operation.Performing the logial OR operation on TRUE | TRUE and TRUE | FLASE will give TRUE.
+
+#### 3. Let x be defined as: 
+Code:
+```{r echo=TRUE,eval=FALSE}
+x<-c('0','10','5','20','15','10','0','5')
+```
+Write an R function that would turn x into a factor whose ordering corresponds to the numerical ordering of x
+
+#### Ans:
+
+```{r echo=TRUE,eval=TRUE}
+x<-c('0','10','5','20','15','10','0','5')
+ y<-factor(sort(as.numeric(x)),ordered = TRUE)
+```
+The **numeric()** converts the list x to numeric. The **sort()** sorts the elements in ascending order. The **factor()** function with **ordered=TRUE** creates the factor y in ordered form.
+
+#### 4. In R, if mtcars is a data frame, why does mtcars[1:20] return an error? How does it differ from the similar mtcars[1:20,]?
+
+#### Ans:
+When slicing a dataframe using mtcars[1:20] there is condition to select only the rows from 1 to 20 but no mention of what to do with the column. In case of mtcars[1:20,] the rows 1 to 20 will get selected from the data frame mtcars. the **,** after 20 suggests that all the columns have to selected.So it does not throw error.
+
+#### 5. Fix each of the following common data frame subsetting errors in R:
+```{r echo=TRUE,eval=FALSE}
+mtcars[mtcars$cyl = 4]
+mtcars[-1:4]
+mtcars[mtars$cyl <= 5]
+mtcars[mtcars$cyl == 4| 6,]
+```
+#### Ans:
+*   **mt[mtcars$cyl=4]** code is trying to get the records from mtcars which have value 4 for **cyl** column. 
+
+Corrected code: **mtcars[mtcars$cyl==4,]**
+
+*   **mtcars[-1:4,]** code is trying to print the first 4 rows and all columns excluding the first row. But -1 can only be used with 0,also there should be a **,** to get the correct syntax.So the desired code is.
+
+  Corrected code: **mtcars[2:4,]**
+
+*   **mtcars[mtars$cyl <= 5]** is trying to print all the records in mtcars data frame having the value of cyl column less than or equal to 5.
+
+  Corrected code: **mtcars[mtars$cyl <= 5,]**
+
+*   **mtcars[mtcars$cyl == 4| 6,]** is trying to extract the data from mtcars dataframe which have cyl as 4 or 6.For this we use **c()**.
+
+  Corrected code : **mtcars[mtcars$cyl == c(4,6),]**
+  
+#### 6. Create the vector (20,19,...,2,1) in R ?
+
+#### Ans:
+The output will be :
+```{r echo=TRUE,eval=TRUE}
+20:1
+```
+
+#### 7. Create a 6X10 matrix of random integers in R
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+x<-matrix(sample(1:100,60,replace=TRUE),nrow=6,ncol=10,byrow=TRUE)
+x
+```
+
+#### 8. Write a function to find the number of entries in each row of a matrix that are greater than 4.
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+x<-matrix(sample(1:10,60,replace=TRUE),nrow=6,ncol=10,byrow=TRUE)
+x
+m<-apply(x,1,function(a){sum(a>4)})
+m
+
+```
+
+#### 9.In continuation of the previous question. write a function to find how many rows have exactly two instances of the number 7.
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+x<-matrix(sample(1:10,60,replace=TRUE),nrow=6,ncol=10,byrow=TRUE)
+x
+y<-which(apply(x,1,function(a){sum(a==7)==2}))
+y
+
+```
+
+#### 10. Create a vector of the values of **$e^x$cos(x)** at x=3,3.1,3.2,.....,6. 
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+x<-seq(3,6,by=0.1)
+x
+exp(x)*cos(x)
+
+```
+#### 11. Create the following by writing code snippets:
+
+#### Ans:
+* $\sum_{i=1}^{100}$($i^3$+4$i^2$)
+```{r echo=TRUE,eval=TRUE}
+i<-1:100
+sum(i^3+4*i^2)
+
+```
+* $\sum_{i=1}^{25}$($\frac{2^i}{i}$+$\frac{3^i}{i^2}$)
+```{r echo=TRUE,eval=TRUE}
+i<-1:25
+sum(((2^i)/i)+(3^i)/(i^2))
+
+```
+
+#### 12. Execute the following lines which create two vectors of random integers which are chosen with replecement from the integers 0,1,......, 9999. both vectors have length 250 . The code:
+```{r echo=TRUE,eval=FALSE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+
+```
+Suppose x=($x_1$,$x_2$,....,$x_n$) denotes the vector xVec and y =($y_1$,$y_2$,....,$y_n$) denotes the vector yVec.
+a. Create the vector ($y_2$-$x_1$,...$y_n$-$x_{n-1}$)
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+yVec[-1]-xVec[-length(xVec)]
+```
+b.Calculate
+$\sum_{i=1}^{n-1}\frac{e^{-x_i +1}}{x_i + 10}$
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+sum(exp(-xVec[-1])/(xVec[-length(xVec)]+10))
+
+```
+#### 13. This question uses the vectors xVec and yVec created in the previous question and the functions sort,order, mean, sqrt, sum and abs.
+a. Pick out the values in yVec which are > 600.
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+yVec[yVec>600]
+
+```
+b. What are the index positions in yVec of the values which are > 600?
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+which(yVec>600)
+```
+c. What are the values in xVec which correspond to the values in yVec which are > 600? (By correspond, we mean at the same index positions.)
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+xVec[yVec>600]
+```
+
+d. How many values in yVec are within 200 of the maximum value of the terms in yVec?
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+ sum( yVec>max(yVec)-200 )
+```
+e. How many numbers in xVec are divisible by 2? 
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+sum(xVec%%2==0)
+```
+f. Sort the numbers in the vector xVec in the order of increasing values in yVec.
+
+#### Ans:
+```{r echo=TRUE,eval=TRUE}
+set.seed(50)
+xVec<-sample(0:999,250,replace=T)
+yVec<-sample(0:999,250,replace=T)
+xVec[order(yVec)]
+```
+
+#### 14. Try exploring the function cumprod() or any other function of your choice to calculate:
+1 +$\frac{2}{3}$+($\frac{2}{3}$ $\frac{4}{5}$)+($\frac{2}{3}$ $\frac{4}{5}$ $\frac{6}{7}$ 
+)+....+ ($\frac{2}{3}$ $\frac{4}{5}$. . .$\frac{38}{39}$)
+
+#### Ans
+```{r echo=TRUE,eval=FALSE}
+1+sum(cumprod(seq(2,38,b=2)/seq(3,39,b=2)))
+```
+
+#### 15. Consider the continuous function f(x).
+Write a function tmpFn which takes a single argument xVec. The function should return the vector of
+values of the function f(x) evaluated at the values in xVec.
+
+#### Ans:
+
+```{r echo=TRUE,eval=FALSE}
+tmpFn <- function(x)
+{
+ifelse(x < 0, x^2 + 2*x + 3, ifelse(x < 2, x+3, x^2 + 4*x - 7))
+}
+a <- seq(-3, 3, len=100)
+plot(a, tmpFn(a), type="l")
+```
+

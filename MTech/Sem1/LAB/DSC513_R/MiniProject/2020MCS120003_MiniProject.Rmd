@@ -1,0 +1,572 @@
+---
+title: "2020MCS120003_MiniProject"
+author: "Amith CA"
+date: "04/10/2020"
+output:
+  html_document:
+   # df_print: paged
+  pdf_document: default
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+<hr  style="height:50px;width:90%">
+
+
+
+# COVID - 19
+
+Coronavirus disease (COVID-19) is an infectious disease caused by a newly discovered coronavirus.
+
+Most people infected with the COVID-19 virus will experience mild to moderate respiratory illness and recover without requiring special treatment.  Older people, and those with underlying medical problems like cardiovascular disease, diabetes, chronic respiratory disease, and cancer are more likely to develop serious illness.
+
+
+```{r  echo=FALSE,eval=TRUE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(leaflet)
+library(data.table)
+library(DT)
+library(zoo)
+# filenames <- c('time_series_covid19_confirmed_global.csv',
+# 'time_series_covid19_deaths_global.csv',
+# 'time_series_covid19_recovered_global.csv')
+# url.path <- paste0('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/',
+# 'master/csse_covid_19_data/csse_covid_19_time_series/')
+# ## download files to local
+# download <- function(filename) {
+# url <- file.path(url.path, filename)
+# dest <- file.path('C:/Users/amith/OneDrive/MTech/Sem1/DSC513_IntroductionToAIAndDataScience/LAB_Dataset/COVID_Dataset/', filename)
+# download.file(url, dest)
+# }
+# bin <- lapply(filenames, download)
+# ## load data into R
+raw.data.confirmed <- read.csv('C:/Users/amith/OneDrive/MTech/Sem1/DSC513_IntroductionToAIAndDataScience/LAB_Dataset/COVID_Dataset/time_series_covid19_confirmed_global.csv')
+raw.data.deaths <- read.csv('C:/Users/amith/OneDrive/MTech/Sem1/DSC513_IntroductionToAIAndDataScience/LAB_Dataset/COVID_Dataset/time_series_covid19_deaths_global.csv')
+raw.data.recovered <- read.csv('C:/Users/amith/OneDrive/MTech/Sem1/DSC513_IntroductionToAIAndDataScience/LAB_Dataset/COVID_Dataset/time_series_covid19_recovered_global.csv')
+raw.data.confirmed
+```
+
+```{r  echo=FALSE,eval=TRUE}
+
+df_confirmed_raw<-gather(raw.data.confirmed,"raw_dates","confirmed_count",c(5:ncol(raw.data.confirmed)))
+
+df_death_raw<-gather(raw.data.deaths,"raw_dates","death_count",c(5:ncol(raw.data.deaths)))
+
+df_recovered_raw<-gather(raw.data.recovered,"raw_dates","recovered_count",c(5:ncol(raw.data.recovered)))
+
+
+df_confirmed_raw$dates<-mdy(str_remove(df_confirmed_raw$raw_dates,"X"))
+df_death_raw$dates<-mdy(str_remove(df_death_raw$raw_dates,"X"))
+df_recovered_raw$dates<-mdy(str_remove(df_recovered_raw$raw_dates,"X")) 
+df_confirmed_raw<-df_confirmed_raw %>% rename(Country=Country.Region,Province=Province.State)
+
+df_death_raw<-df_death_raw %>% rename(Province=Province.State,Country=Country.Region)
+df_recovered_raw<-df_recovered_raw %>% rename(Province=Province.State,Country=Country.Region)
+
+
+df_first_confirmed<-df_confirmed_raw %>% filter(confirmed_count>0) %>% group_by(Country,Province) %>% summarise(FirstConfirmed=min(dates),.groups="drop") %>% arrange(FirstConfirmed)
+
+```
+
+```{r  echo=FALSE,eval=TRUE}
+v_max_date<-max(df_confirmed_raw$dates)
+
+v_total_confirmed<-df_confirmed_raw %>% filter(dates==max(dates)) %>% summarise(total_confirmed=sum(confirmed_count))
+
+v_total_confirmed_yesterday<-df_confirmed_raw %>% filter(dates==max(dates)-1) %>% summarise(total_confirmed=sum(confirmed_count))
+
+v_new_comfirmed<-v_total_confirmed-v_total_confirmed_yesterday
+
+v_total_death<-df_death_raw %>% filter(dates==max(dates)) %>% summarise(total_death=sum(death_count))
+
+v_total_death_yesterday<-df_death_raw %>% filter(dates==max(dates)-1) %>% summarise(total_death=sum(death_count))
+
+v_new_death<-v_total_death-v_total_death_yesterday
+
+v_total_recovered<-df_recovered_raw %>% filter(dates==max(dates)) %>% summarise(total_recovered=sum(recovered_count))
+
+v_total_recovered_yesterday<-df_recovered_raw %>% filter(dates==max(dates)-1) %>% summarise(total_recovered=sum(recovered_count))
+
+v_new_recovered<-v_total_recovered-v_total_recovered_yesterday
+  
+v_total_active<-v_total_confirmed-v_total_recovered-v_total_death
+
+v_total_active_yesterday<-v_total_confirmed_yesterday-v_total_recovered_yesterday-v_total_death_yesterday
+
+v_new_active<-v_total_active-v_total_active_yesterday
+
+plot1<-ggplot(df_confirmed_raw %>% group_by(dates) %>% summarise(confirmed_count=sum(confirmed_count),.groups="drop"),aes(x=dates,y=confirmed_count))+geom_ribbon(aes(ymin=confirmed_count,ymax=confirmed_count),alpha=0.2,color="blue",fill="blue")+ theme_bw()+ scale_y_continuous(labels=scales::unit_format(suffix="M", scale=0.000001,  sep=","))+ theme(
+  panel.border = element_blank(),
+  panel.grid.minor = element_blank()
+  )+labs(title="",subtitle="",caption="",x="",y="")
+```  
+<table><tr><td>
+
+```{r  echo=FALSE,eval=TRUE}
+ggplot(df_confirmed_raw %>% group_by(dates) %>% summarise(confirmed_count=sum(confirmed_count),.groups="drop"),aes(x=dates,y=confirmed_count))+geom_ribbon(aes(ymin=confirmed_count,ymax=confirmed_count),alpha=0.2,color="blue",fill="blue")+ theme_bw()+ scale_y_continuous(labels=scales::unit_format(suffix="M", scale=0.000001,  sep=","))+ theme(
+  panel.border = element_blank(),
+  panel.grid.minor = element_blank()
+  )+labs(title=paste("Total Confirmed cases :", format(v_total_confirmed,big.mark=",",scientific=FALSE)),subtitle="",caption="",x="",y="")
+
+```
+</td><td>Newly confirmed cases:<br/> <span style="color: blue;font-size:200%">`r format(v_new_comfirmed,big.mark=",",scientific=FALSE)` ↑</span></td></tr></table>
+
+
+
+<hr  style="height:10px;width:90%">
+### Worldwide Data
+<br/>
+Globally, as of  `r format(v_max_date,"%d-%b-%Y")`, there have been <span style="color: red;">`r format(v_total_confirmed,big.mark=",",scientific=FALSE)`</span> confirmed cases of COVID-19, including <span style="color: red;">`r format(v_total_death,big.mark=",",scientific=FALSE,color="red")` </span>deaths, reported. 
+
+There are <span style="color: red;"> `r format(v_new_comfirmed,big.mark=",",scientific=FALSE)` </span> newly confirmed cases and <span style="color: red;">`r format(v_new_death,big.mark=",",scientific=FALSE)` </span>new deaths.
+
+Source: https://raw.githubusercontent.com/CSSEGISandData/COVID-19/
+
+<br/><br/>
+<table style="width:100%;text-align: center;">
+  <tr>
+    <th style="color:white;background-color: orange;padding:15px" >ACTIVE CASES</th>
+    <th style="color:white;background-color: red">DEATHS</th>
+    <th style="color:white;background-color: green">RECOVERED CASES</th>
+  </tr>
+  <tr>
+    <td style="font-family: times, serif;font-size:200%;color: orange;">`r format(v_total_active,big.mark=",",scientific=FALSE)`</td>
+    <td><span style="font-family: times, serif;font-size:200%;color: red;">`r format(v_total_death,big.mark=",",scientific=FALSE)`</span>
+</td>
+    <td><span style="font-family: times, serif;font-size:200%;color: green;">`r format(v_total_recovered,big.mark=",",scientific=FALSE)`</span></td>
+  </tr>
+ <tr>
+    <td style="font-family: times, serif;font-size:80%;color: orange;">↑ `r format(v_new_active,big.mark=",",scientific=FALSE)`</td>
+    <td><span style="font-family: times, serif;font-size:80%;color: red;">↑ `r format(v_new_death,big.mark=",",scientific=FALSE)`</span>
+</td>
+    <td><span style="font-family: times, serif;font-size:80%;color: green;">↑ `r format(v_new_recovered,big.mark=",",scientific=FALSE)`</span></td>
+  </tr>
+</table>
+<hr  style="height:30px;width:90%">
+
+### Active cases: 
+
+<br/>
+From the source dataset the total number of confirmed cases,the total deaths and the total number of recovered cases  of a country/province as of `r format(v_max_date,"%d-%b-%Y")`,is readily available. By reducing the sum of death and recovered cases from the total number of cases on a day. We will be able to find the total number of active cases in the Country/province till that day.
+Given below is a plot of the total number of active cases in a country / province.<br/>
+ The places with the number of active cases above 10,00,000 are plotted using red markers. The places with active count between 1000 and 10,00,000 are plotted using the orange markers. The places with the number of active cases less than 1000 are plotted using the blue markers.
+<br/><br/>
+The number of active cases of a country/province can be viewed by clicked on the marker in the map.
+<br/><br/>
+```{r  echo=FALSE,eval=TRUE}
+
+df_merge_raw<-merge(df_confirmed_raw,df_death_raw)
+df_merge_raw<-merge(df_merge_raw,df_recovered_raw)
+df_merge_raw$active_count<-df_merge_raw$confirmed_count-(df_merge_raw$death_count+df_merge_raw$recovered_count)  
+
+df_merge_raw$death_to_confirmed_ratio<-ifelse((df_merge_raw$confirmed_count<1),0,(df_merge_raw$death_count/df_merge_raw$confirmed_count))
+
+df_merge_raw$recovered_to_confirmed_ratio<-ifelse((df_merge_raw$confirmed_count<1),0,(df_merge_raw$recovered_count/df_merge_raw$confirmed_count))
+
+df_merge_raw$active_to_confirmed_ratio<-ifelse((df_merge_raw$confirmed_count<1),0,(df_merge_raw$active_count/df_merge_raw$confirmed_count))
+
+df_merge_india<-df_merge_raw %>% filter(Country=="India")
+
+
+# rmarkdown::paged_table(df_merge_india %>% select(dates,confirmed_count,death_count,recovered_count,active_count))
+
+df_country_confirmed_monthly<-df_confirmed_raw%>%group_by(Country,yermonidr=format(as.Date(df_confirmed_raw$dates), "%Y-%m")) %>% summarise(cnt=sum(confirmed_count), .groups='drop')
+
+leaflet() %>% addProviderTiles(providers$Stamen.Toner) %>% addCircleMarkers( data=df_merge_raw %>% filter(dates==max(dates)),~Long,~Lat,popup=~paste(Country,"/",Province,"<br/>Active: ",format(active_count,big.mark=",",scientific=FALSE)), radius = ~ifelse(active_count<1000000, ifelse(active_count<1000,1,2), 7),color = ~ifelse(active_count<1000000, ifelse(active_count<1000,"blue","orange"),"red"),
+                                                                                stroke = TRUE, fillOpacity = 1) %>%  addLegend( colors=c("red","orange","blue"),labels=c(">1,000,000","1000-1,000,000","<1000"),
+    title = "Number of Active cases"
+    
+  ) 
+```
+
+<hr  style="height:30px;width:90%">
+### Top 10 Countries based on Active cases:
+<br/>
+The below list shows the top 10 countries with the most number of active cases as of `r format(v_max_date,"%d-%b-%Y")`.
+<br/>
+The newly reported death, confirmed cases and recovered is calculated by subtracting the total count of the previous day with the current count.
+<br/>
+```{r  echo=FALSE,eval=TRUE}
+
+
+v_country_province_list<-unique(df_merge_raw %>% select(Province,Country))
+j=0
+for(c in unique(v_country_province_list$Country)){
+  for(p in unique(v_country_province_list%>% filter(Country%in%c) %>% select(Province))){
+    #print(c)
+    #print(p)
+    df_tmp<-df_merge_raw %>% filter(Country%in%c,Province%in%p)
+    df_tmp2<-df_tmp %>%
+      group_by(Province,Country) %>%arrange(dates,.by_group = TRUE) %>% 
+      mutate(new_confirmed = confirmed_count - lag(confirmed_count, default = 0, order_by = dates)) %>%  mutate(new_death = death_count - lag(death_count, default = 0, order_by = dates)) %>%  mutate(new_recovered = recovered_count - lag(recovered_count, default = 0, order_by = dates))
+    ifelse(j>0,df_merge<-rbind(df_merge,df_tmp2),df_merge<-df_tmp2)
+    j=j+1
+  }
+}
+
+df_merge_country<-df_merge%>% group_by(Country,dates) %>% summarise(confirmed_count=sum(confirmed_count),death_count=sum(death_count),recovered_count=sum(recovered_count),active_count=sum(active_count),new_confirmed=sum(new_confirmed),new_death=sum(new_death),new_recovered=sum(new_recovered),.groups="drop")
+
+
+
+df_merge_country$death_to_confirmed_ratio<-ifelse((df_merge_country$confirmed_count<1),0,(df_merge_country$death_count/df_merge_country$confirmed_count))
+
+df_merge_country$recovered_to_confirmed_ratio<-ifelse((df_merge_country$confirmed_count<1),0,(df_merge_country$recovered_count/df_merge_country$confirmed_count))
+
+
+```
+
+```{r  echo=FALSE,eval=TRUE}
+df_cnt<-df_merge %>% filter(dates==max(dates)) %>%group_by(Country,dates) %>%summarise(confirmed_count=sum(confirmed_count), death_count=sum(death_count),recovered_count=sum(recovered_count),active_count=sum(active_count),new_confirmed=sum(new_confirmed),new_death=sum(new_death),new_recovered=sum(new_recovered),.groups="drop") %>%   arrange(desc(active_count))
+
+df_country<-df_cnt %>% select(Country,confirmed_count,death_count,recovered_count,active_count,new_confirmed,new_death)
+
+df_country$death_to_confirmed_ratio<-ifelse((df_country$confirmed_count<1),0,(df_country$death_count/df_country$confirmed_count))
+
+df_country$recovered_to_confirmed_ratio<-ifelse((df_country$confirmed_count<1),0,(df_country$recovered_count/df_country$confirmed_count))
+
+df_top10_active_country<-head(df_country,n=10) %>% select(Country,confirmed_count,death_count,recovered_count,active_count,new_confirmed,new_death,death_to_confirmed_ratio,recovered_to_confirmed_ratio)
+
+# df_top10_active_country$active_to_confirmed_ratio<-ifelse((df_top10_active_country$confirmed_count<1),0,(df_top10_active_country$active_count/df_top10_active_country$confirmed_count))
+
+df_top12_active_country<-head(df_country,n=12) 
+
+v_top10_active_country<-unique(df_top10_active_country$Country)
+v_top12_active_country<-unique(df_top12_active_country$Country)
+figure1 <- ggplot(data=df_confirmed_raw %>% filter(Country %in%v_top10_active_country)%>% group_by(Country,dates) %>% summarise(confirmed_count=sum(confirmed_count),.groups="drop") , aes(x=dates, y=confirmed_count, color=Country))+geom_line(size=0.7)+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")+ scale_y_continuous(labels=scales::unit_format(suffix="K", scale=0.001,  sep=","))+ theme(
+  panel.border = element_blank(),
+ 
+  panel.grid.minor = element_blank()
+  )+ theme_bw()
+
+colnames(df_country)=c("Country","Total Confirmed","Total Death","Total Recovered","Total Active","Newly Confirmed","New Deaths","Death ratio","Recovered ratio")
+
+df_country$`Death ratio`=round(df_country$`Death ratio`,4)
+
+df_country$`Recovered ratio`=round(df_country$`Recovered ratio`,4)
+
+# df_top10_active_country$`Active ratio`=round(df_top10_active_country$`Active ratio`,4)
+
+dt_country<-data.table(df_country)
+```
+<hr  style="height:30px;width:90%">
+
+<div style="width:80%">
+```{r  echo=FALSE,eval=TRUE}
+datatable(dt_country) %>%formatStyle(columns=colnames(dt_country),fontSize = '80%')
+
+```
+</div>
+<br/>
+The death ratio in the above table represents the ratio of total number of deaths to total number of confirmed cases.
+<br/>
+The recovered ratio in the above table represents the ratio of total number of recovered cases to total number of confirmed cases.
+<hr  style="height:30px;width:90%">
+
+### Confirmed cases plot
+<br/>
+A Plot of increase in confirmed cases in the countries with most number of active cases. From the graph we can find the increase number of confirmed cases in country.
+<br/>
+
+```{r  echo=FALSE,eval=TRUE}
+#knitr::kable(dt_top10_active_country, align = "lccrr")
+#rmarkdown::paged_table(dt_top10_active_country)
+
+figure1
+
+
+
+```
+
+
+```{r  echo=FALSE,eval=FALSE}
+figure5<-ggplot(df_merge_raw %>% filter(Country%in%v_top10_active_country),aes(x=dates,y=death_to_confirmed_ratio,color=Country,fill=Country)) +geom_ribbon(aes(ymin=0,ymax=death_to_confirmed_ratio,alpha=0.1))+ theme_bw()+ theme(
+    # Hide panel borders and remove grid lines
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    # Change axis line
+    axis.line = element_line(colour = "black")
+)+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+
+figure5
+
+```
+
+### Comparison of the number of daily deaths reported 
+
+A Plot of number of reported deaths of the countries with the highest active cases. By analysing the below graph we can understand how successful the country has been in dealing with the ongoing pandemic, to minimize the deaths.
+
+```{r  echo=FALSE,eval=TRUE,message=FALSE}
+# plot3<-ggplot(df_merge_raw %>% filter(Country%in%v_top12_active_country),aes(x=dates,y=death_to_confirmed_ratio,color=Country))+geom_point(color="black")+geom_smooth(method = "loess")+facet_wrap(~Country)+ theme_bw()+ theme(
+#     panel.border = element_blank(),
+#     panel.grid.major = element_blank(),
+#     axis.line = element_line(colour = "black")
+# )+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+# 
+# plot3
+
+df_merge_country<-df_merge_country %>% mutate(mean_new_death=round(rollmean(new_death,7,fill=0),0),
+                                              mean_new_confirmed=round(rollmean(new_confirmed,7,fill=0),0))
+# df_merge_country$mean_new_death<-mean_new_death=round(df_merge_country$mean_new_death,0)
+df_tmp3<-gather(df_merge_country %>% select(Country,dates,mean_new_death,mean_new_confirmed),"mean_value","count",c(mean_new_death,mean_new_confirmed))
+
+df_tmp3$mean_value<-ifelse(df_tmp3$mean_value=="mean_new_death","Death","Confirmed")
+
+plot5<-ggplot(df_merge_country %>% filter(Country%in%v_top12_active_country),aes(x=dates,y=mean_new_death,color="red"))+geom_line()+facet_wrap(~Country)+ theme_bw()+ theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line = element_line(colour = "black")
+)+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+
+plot5
+
+# ggplot(df_merge_country %>% filter(Country%in%v_top12_active_country),aes(x=dates,y=mean_new_confirmed,color="green"))+geom_line()+facet_wrap(~Country)+ theme_bw()+ theme(
+#     panel.border = element_blank(),
+#     panel.grid.major = element_blank(),
+#     axis.line = element_line(colour = "black")
+# )+labs(title="Plot of the daily reported confirmed cases",subtitle="Plot of the 7 day mean of the daily reported confirmed cases in the countires with the most number of active cases.",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+```
+
+
+
+<hr  style="height:50px;width:90%">
+
+### The date at which the first confirmed case was found in a country province.
+<br/>
+
+<div style="width:80%;align:center">
+```{r  echo=FALSE,eval=TRUE}
+#rmarkdown::paged_table(df_first_confirmed)
+datatable(df_first_confirmed)
+
+
+tmp_new_confirmed<-max(df_merge$new_confirmed)
+v_max_new_confirmed<-df_merge %>% filter(new_confirmed==tmp_new_confirmed)
+
+tmp_new_death<-max(df_merge$new_death)
+v_max_new_death<-df_merge %>% filter(new_death==tmp_new_death)
+
+tmp_max_death_ratio<-max(df_merge_raw %>% filter(confirmed_count>1000) %>% select(death_to_confirmed_ratio))
+
+v_max_death_ratio<-df_merge %>% filter(death_to_confirmed_ratio==tmp_max_death_ratio)
+
+v_max_death_ratio<-v_max_death_ratio %>% filter(dates==max(dates))
+
+
+```
+</div>
+<hr  style="height:30px;width:90%">
+
+### Additional inferences:
+<br/><br/>
+
+The  most number of confirmed cases reported on a single day was  <span style="font-family: times, serif;font-size:100%;color: red;">`r format(tmp_new_confirmed,big.mark=",",scientific=FALSE)`</span>  at `r v_max_new_confirmed$Province` `r v_max_new_confirmed$Country` on `r format(v_max_new_confirmed$dates,"%d-%b-%Y")`.
+<br/><br/>
+The  most number of deaths  reported on a single day was  <span style="font-family: times, serif;font-size:100%;color: red;">`r format(tmp_new_death,big.mark=",",scientific=FALSE)`</span>  at  `r v_max_new_death$Province`  `r v_max_new_death$Country` on `r format(v_max_new_death$dates,"%d-%b-%Y")`.
+<br/><br/>
+The  place with the highest death percentage amoung the countries having more than 1000 confirmed cases is  `r v_max_new_confirmed$Province` `r v_max_new_confirmed$Country`, with a death percentage of  <span style="font-family: times, serif;font-size:100%;color: red;">`r format(v_max_death_ratio$death_to_confirmed_ratio*100,big.mark=",",scientific=FALSE)`%</span>.
+<br/><br/>
+<hr  style="height:30px;width:90%">
+
+# INDIA 
+<span style="background: url('india-flag.png');height: 32px;width: 32px;display: block;"></span>
+
+```{r  echo=FALSE,eval=TRUE}
+df_india_latest_info<-df_merge_raw %>% filter(Country=="India",dates==max(dates))
+
+df_india_yesterday_info<-df_merge_raw %>% filter(Country=="India",dates==max(dates)-1)
+
+```
+
+So far, India has recorded <span style="color: blue;"> `r format(df_india_latest_info$confirmed_count,big.mark=",",scientific=FALSE)`</span> confirmed COVID-19 cases, including <span style="color: red;"> `r format(df_india_latest_info$death_count,big.mark=",",scientific=FALSE)`</span> deaths. A total of <span style="color: green;"> `r format(df_india_latest_info$recovered_count,big.mark=",",scientific=FALSE)`</span> people have recuperated from COVID-19 so far. There are <span style="color: orange;"> `r format(df_india_latest_info$active_count,big.mark=",",scientific=FALSE)`</span> active cases in the country as of date,  which comprise <span style="color: orange;"> `r format(df_india_latest_info$active_to_confirmed_ratio*100,big.mark=",",scientific=FALSE)`%</span> percent of the total caseload, the data stated. 
+
+Government of INDIA Ministry of Health and Family Welfare official website: https://www.mohfw.gov.in/
+<br/><br/>
+
+### COVID-19 data : India
+<br/>
+A Plot of change in confirmed cases,recovered cases,active cases, deaths in India
+<br/>
+```{r  echo=FALSE,eval=TRUE}
+
+df_india_neighbour<-df_merge_raw %>% filter(Country%in% c("Afghanistan", "Bangladesh", "Bhutan", "China", "Maldives", "Myanmar", "Nepal", "Pakistan", "Sri Lanka"))%>% group_by(Country,dates) %>% summarise(confirmed_count=sum(confirmed_count),.groups="drop")
+       
+
+df_india<-gather(df_merge_raw %>% filter(Country%in% c("India"))%>% group_by(Country,dates) %>% summarise(Confirmed=sum(confirmed_count),Recovered=sum(recovered_count),Deaths=sum(death_count),Active=sum(active_count),.groups="drop"),"rectyp","count",c(Confirmed,Active,Recovered,Deaths))
+
+figure2<-ggplot(df_india,aes(x=dates,y=count,color=rectyp,fill=rectyp))+geom_ribbon(aes(ymin=0,ymax=count),alpha=0.1)+ scale_y_continuous(labels=scales::unit_format(suffix="K", scale=0.001,  sep=""))+ theme_bw()+ theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(colour = "black")
+  )+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+
+figure2 
+```
+<hr  style="height:30px;width:90%">
+
+### Death to Confirmed ratio plot
+<br/><br/>
+```{r  echo=FALSE,eval=TRUE}
+figure5<-ggplot(filter(df_merge_raw,Country=="India"),aes(x=dates,y=death_to_confirmed_ratio,fill="red",color="red",line=3))+geom_ribbon(aes(ymin=0,ymax=death_to_confirmed_ratio,alpha=0.3))+ theme_bw()+ theme(
+ 
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  #panel.grid.minor = element_blank(),
+   legend.position="none",
+  axis.line = element_line(colour = "black")
+  )+labs(title="",subtitle="",caption="",x="",y="")
+
+figure5
+
+
+
+figure6<-ggplot(filter(df_merge_country,Country=="India"),aes(x=dates,y=new_confirmed,color="blue",fill="blue",alpha=0.1))+geom_ribbon(aes(ymin=0,ymax=new_confirmed))+ theme_bw()+ theme(
+    
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+    legend.position="none",
+    axis.line = element_line(colour = "black")
+)+labs(title="Plot of daily confirmed cases in India",subtitle="",caption="",x="",y="")
+
+#figure6
+```
+
+### Plot of the daily reported confirmed and death count in India
+
+```{r  echo=FALSE,eval=TRUE}
+ggplot(df_tmp3%>% filter(Country=="India"),aes(x=dates,y=count,color=mean_value,fill=mean_value))+geom_ribbon(aes(ymin=0,ymax=count,alpha=0.1))+ theme_bw()+ theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line = element_line(colour = "black")
+)+labs(title="",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+v_df_confirmed_daily_max<-df_tmp3%>% filter(Country=="India",mean_value=="Confirmed")
+v_df_confirmed_daily_max<-v_df_confirmed_daily_max %>% filter(count==max(count))
+
+```
+
+The maximum number of confirmed cases reported on a single day in India  is  `r format(v_df_confirmed_daily_max$count,big.mark=",",scientific=FALSE)` on `r format(v_df_confirmed_daily_max$dates,"%d-%b-%Y")`.
+
+<hr  style="height:30px;width:90%">
+
+
+### Confimed cases plot in India's neighbouring countries
+
+A comparison of confirmed cases increase in India's neighbouring countries.
+<br/>
+
+```{r  echo=FALSE,eval=TRUE}
+
+
+figure3 <- ggplot(data=df_india_neighbour, aes(x=dates, y=confirmed_count,color=Country,fill=Country))+geom_line(size=0.5)+labs(title="Confirmed cases plot",subtitle="",caption="Source: CSSEGISandData - COVID-19",x="",y="Confirmed cases")+ scale_y_continuous(labels=scales::unit_format(suffix="K", scale=0.001,  sep="")) +geom_ribbon(aes(ymin=0,ymax=confirmed_count),alpha=0.08)+ theme_bw()+ theme(
+  # Hide panel borders and remove grid lines
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  axis.line = element_line(colour = "black")
+  )
+
+
+figure3
+```
+
+### Deaths to confirmed count of India and its neighbours.
+<br/>
+
+The below graph shows the death to confirmed ratio of India and its neighboring countries.<br/>
+```{r  echo=FALSE,eval=TRUE,message=FALSE}
+
+figure4<-ggplot(df_merge_raw %>% filter(Country%in% c("Afghanistan", "Bangladesh", "Bhutan", "Maldives", "Myanmar", "Nepal", "Pakistan", "Sri Lanka","India","China")),aes(x=dates,y=death_to_confirmed_ratio,color=Country))+geom_smooth(method = "loess")+facet_wrap(~Country)+ theme_bw()+ theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line = element_line(colour = "black")
+)+labs(title="",subtitle="A Plot of change in death to confirmed ratio of India and its neighbours",caption="Source: CSSEGISandData - COVID-19",x="",y="")
+
+figure4
+```
+
+```{r  echo=FALSE,eval=FALSE}
+df_country_confirmed_monthly
+ggplot(filter(df_country_confirmed_monthly,Country=="India"),aes(x=yermonidr,y=cnt))+geom_point()
+
+
+
+ggplot(filter(df_merge_raw,Country=="India"),aes(x=dates,y=death_to_confirmed_ratio))+geom_point()
+
+#leaflet() %>% addProviderTiles("CartoDB")
+```
+
+
+<hr  style="height:30px;width:90%">
+
+### Symptoms
+
+Symptoms of COVID-19 may appear in as few as 2 days or as long as 14 (estimated ranges vary from 2-10 days, 2-14 days, and 10-14 days), during which the virus is contagious but the patient does not display any symptom (asymptomatic transmission).
+
+COVID-19 affects different people in different ways. Most infected people will develop mild to moderate illness and recover without hospitalization.
+
+
+<table style="width:100%;text-align: left" border="2 #5996f7">
+  <tr>
+    <th style="color:white;background-color: #5996f7;text-align: center;padding:15px"  width=30%>Most common symptoms</th>
+    <th style="color:white;background-color: #5996f7;text-align: center" width=30%>Less common symptoms</th>
+    <th style="color:white;background-color: #5996f7;text-align: center" width=30%>Serious symptoms CASES</th>
+  </tr>
+  <tr style="vertical-align:top;padding:15px">
+    <td><br/><ul><li>Fever</li><br/>
+<li>Dry cough</li><br/>
+<li>Tiredness</li></ul>
+<br/></td>
+ <td><br/><ul><li>Aches and pains</li><br/>
+<li>Sore throat</li><br/>
+<li>Diarrhoea</li><br/>
+<li>Conjunctivitis</li><br/>
+<li>Headache</li><br/>
+<li>Loss of taste or smell</li><br/>
+<li>A rash on skin, or discolouration of fingers or toes</li></ul><br/></td>
+ <td><br/><ul><li>Difficulty breathing or shortness of breath</li><br/>
+<li>Chest pain or pressure</li><br/>
+<li>Loss of speech or movement</li></ul><br/></td>
+</tr>
+</table>
+<br/><br/><br/>
+Seek immediate medical attention if you have serious symptoms.  Always call before visiting your doctor or health facility. 
+<br/>
+People with mild symptoms who are otherwise healthy should manage their symptoms at home. 
+<br/><br/>
+On average it takes 5–6 days from when someone is infected with the virus for symptoms to show, however it can take up to 14 days. 
+
+
+
+<hr  style="height:30px;width:90%">
+
+### Tips to Prevent the spread of Corona virus:
+<br/>
+<br/>
+To prevent infection and to slow transmission of COVID-19, do the following:
+<br/><br/>
+<ul>
+<li>Wash your hands regularly with soap and water, or clean them with alcohol-based hand rub.</li><br/>
+<li>Maintain at least 1 metre distance between you and people coughing or sneezing.</li><br/>
+<li>Avoid touching your face.</li><br/>
+<li>Cover your mouth and nose when coughing or sneezing.</li><br/>
+<li>Stay home if you feel unwell.</li><br/>
+<li>Refrain from smoking and other activities that weaken the lungs.</li><br/>
+<li>Practice physical distancing by avoiding unnecessary travel and staying away from large groups of people.</li></ul>
+
+
+
+<hr  style="height:50px;width:90%">
+
+
+<span style="font-size:400%;text-align:center"></span>

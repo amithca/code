@@ -1,0 +1,247 @@
+---
+title: "2020MCS120003_LabAssignment03"
+author: "Amith C A"
+date: "13/09/2020"
+output:
+  pdf_document: default
+  html_document: default
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## 2020MCS120003_LabAssignment03
+
+#### Question 1
+### Ans:
+
+```{r  echo=FALSE,eval=TRUE, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(gapminder)
+gapminder_2007<-gapminder %>% filter(year==2007)
+gapminder_1962<-gapminder %>% filter(year==1962)
+```
+
+```{r  echo=FALSE,eval=TRUE}
+ggplot(rbind(gapminder_2007,gapminder_1962),aes(x=gdpPercap,y=lifeExp,color=continent))+geom_point()+facet_grid(continent ~ year)
+```
+
+#### Question 2
+### Ans:
+
+```{r  echo=FALSE,eval=TRUE}
+gapminder_India<-gapminder %>% filter(country=='India') %>% filter(year>=1957) %>% filter(year<=2007)
+ggplot(gapminder_India,aes(x=year,y=pop))+geom_point()+scale_y_log10() + scale_x_continuous(breaks = seq(1950, 2010, by = 10))
+```
+
+#### Question 3
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder%>%
+mutate(dollars_per_day=gdpPercap/(365*10^3))
+```
+
+
+#### Question 4
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-gapminder%>%
+filter(country=="United States")%>%filter(year==2007)
+rmarkdown::paged_table(x)
+
+```
+
+#### Question 5
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-gapminder %>%
+arrange(gdpPercap)
+rmarkdown::paged_table(x)
+```
+
+
+#### Question 6
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-gapminder %>%
+arrange(lifeExp)
+rmarkdown::paged_table(x)
+```
+
+
+#### Question 7
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-gapminder %>%
+     filter(year == 1952)
+rmarkdown::paged_table(x)
+```
+
+
+#### Question 8
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-gapminder %>%
+     filter(continent == 'Europe')%>% filter(year == 1992) %>%
+filter(pop == max(pop))
+rmarkdown::paged_table(x)
+```
+
+
+#### Question 9
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+x<-filter(filter (gapminder,continent == 'Europe',year == 1992),pop==max(pop))
+rmarkdown::paged_table(x)
+```
+
+#### Question 10
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder_2007<- gapminder %>%
+     filter(year == 2007)
+ggplot(gapminder_2007, aes(x = gdpPercap, y = lifeExp)) +
+geom_point() +scale_x_log10()
+```
+
+#### Question 11
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder_1952 <- gapminder %>%
+     filter(year == 1952)
+ggplot(gapminder_1952, aes(x = pop, y = lifeExp, color = 'blue')) +
+geom_point(color='blue') +scale_x_log10()
+```
+
+#### Question 12
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+ggplot(gapminder,aes(x=pop))+
+geom_density()+
+scale_x_log10()+ facet_wrap(~year)
+```
+
+
+#### Question 13
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder_1962 <- gapminder %>%
+     filter(year == 1962)
+gapminder_2007 <- gapminder %>%
+   filter(year == 2007)
+gapminder_2002 <- gapminder %>%
+   filter(year == 2002)
+gapminder_1967 <- gapminder %>%
+   filter(year == 1967)
+ggplot(rbind(gapminder_2007,gapminder_1962,gapminder_1967,gapminder_2002),aes(x=pop,y=lifeExp,color=continent))+geom_point()+scale_x_log10()+facet_grid(continent~year)
+```
+
+#### Question 14
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+ggplot(gapminder, aes(x =lifeExp)) +
+geom_histogram(bins = 30)
+```
+
+#### Question 15
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE,warning=FALSE}
+ggplot(rbind(gapminder_2007,gapminder_1962),aes(x=gdpPercap,y=lifeExp,color=continent))+geom_point()+geom_smooth(method = "loess")+facet_wrap(~continent)
+```
+
+#### Question 16 a)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder %>% filter(year == 2007, country == 'United States')
+```
+
+
+#### Question 16 b)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder %>%
+filter(year==1977) %>%filter(country=='Ireland')
+
+gapminder %>%
+filter(year==1977) %>%filter(country== 'Brazil')
+```
+
+
+#### Question 17 a)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder_2007 <- gapminder %>%
+filter(year == 2007)
+ggplot(gapminder_2007, aes(x = pop, y =lifeExp )) +
+geom_line()
+
+
+```
+Population is inversely proportional to the life expectancy
+
+#### Question 17 b)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+
+gapminder_2007 <- gapminder %>%
+filter(year == 2007)
+ggplot(gapminder_2007, aes(x = pop, y =gdpPercap )) +
+geom_line()
+
+```
+
+Population and gdpPercap are inversely proportional.
+
+#### Question 18
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+
+x<-gapminder %>%
+  mutate(lifeExp=12*lifeExp)%>%arrange(lifeExp)%>%
+filter(continent=="Americas")%>%filter(year==1962)
+rmarkdown::paged_table(x)
+
+```
+
+**Bolivia** has the shortest life expectancy in 1962.
+
+#### Question 19 a)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+gapminder_1952<-gapminder %>%
+filter(year==1952)
+gapminder_1952
+```
+
+
+
+#### Question 19 b)
+### Ans:
+
+```{r  echo=TRUE,eval=TRUE}
+ggplot(gapminder_1952,aes(x=pop,y=lifeExp,color=continent))+ geom_point()+scale_x_log10()
+```
+

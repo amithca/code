@@ -1,0 +1,131 @@
+---
+title: "2020MCS120003_LabAssignment4"
+author: "Amith C A"
+date: "04/10/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r  echo=FALSE,eval=TRUE, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+
+```
+
+
+### Step 1: Changing characters to factors
+
+```{r  echo=TRUE,eval=TRUE}
+flying_etiquette<-read.csv("flying_etiquette.csv",na.strings=c(""),stringsAsFactors=TRUE) 
+df_fe<-filter(flying_etiquette,How.often.do.you.travel.by.plane.!="Never")
+glimpse(df_fe)
+```
+
+
+### Step 2 : Tidying data
+
+```{r  echo=TRUE,eval=TRUE}
+ 
+col_names_rude<-names(df_fe[,str_detect(names(df_fe),"rude")])
+df_fe_long<-gather(df_fe,"response_var","values",c(2:(ncol(df_fe)-5)))
+head(df_fe_long)
+
+```
+
+
+### Step 3 : Cleaning up strings
+
+```{r  echo=TRUE,eval=TRUE}
+df_fe_long$response_var[str_detect(df_fe_long$response_var,"rude.to.")]<-str_remove(df_fe_long$response_var[str_detect(df_fe_long$response_var,"rude.to.")],"^[A-Za-z\\.]*rude.to.")
+df_fe_long$response_var[str_detect(df_fe_long$response_var,".on.a.plane")]<-str_remove(df_fe_long$response_var[str_detect(df_fe_long$response_var,".on.a.plane.")],".on.a.plane.")
+unique(df_fe_long$response_var)
+
+```
+
+
+### Step 4 : Dichotomizing variables
+
+```{r  echo=TRUE,eval=TRUE}
+dim(df_fe_long[is.na(df_fe_long$values),])
+df_fe_long_NA<-df_fe_long[is.na(df_fe_long$values),]
+df_fe_long<-df_fe_long[!is.na(df_fe_long$values),]
+dim(df_fe_long[is.na(df_fe_long$values),])
+dim(df_fe_long_NA)
+df_fe_long$rude<-0
+df_fe_long[str_detect(df_fe_long$values,c("No, not at all rude","Not, at all rude")),]$rude<-1
+df_fe_long %>%  group_by(df_fe_long$rude) %>% summarise(n=n())
+head(arrange(df_fe_long,desc(rude)))
+
+```
+
+
+### Step 5 : Summarizing data
+
+```{r  echo=TRUE,eval=TRUE}
+rude_behaviors<-df_fe_long %>%group_by(response_var) %>% summarise(perc_rude=mean(rude),  .groups = 'drop')
+rude_behaviors
+
+```
+
+
+### Step 6 : Create a plot
+
+```{r  echo=TRUE,eval=TRUE}
+
+initial_plot<-ggplot(filter(rude_behaviors,perc_rude>0),aes(x=reorder(response_var,perc_rude),y=perc_rude))+geom_bar(stat = "identity",width=0.5)
+
+initial_plot 
+```
+
+
+### Step 7 : Fixing Labels
+
+```{r  echo=TRUE,eval=TRUE}
+
+new_plot<-initial_plot+labs(x="",y="")
+new_plot
+titled_plot<-initial_plot+labs(title="Hell Is Other People In A Pressurized Metal Tube",subtitle="Percentage of 874 air-passenger respondents who said action is very or somewhat rude",caption="Source: Survery Monkey Audience",x="",y="")
+titled_plot
+```
+
+
+### Step 8 : Flipping coordinates
+
+```{r  echo=TRUE,eval=TRUE}
+
+ titled_plot+coord_flip()
+
+titled_plot+coord_flip()+ theme(
+     axis.text.x = element_blank(),
+     axis.ticks = element_blank())
+```
+
+
+
+### Step 9 : Find out
+
+```{r  echo=TRUE,eval=TRUE}
+
+df_edu<-df_fe%>%filter(!is.na(Education)) %>% group_by(Education) %>% summarize(freq=n())
+ggplot(df_edu,aes(x=freq,y=reorder(Education,-freq), fill=factor(ifelse(Education=="Bachelor degree","Highlighted","Normal"))))+geom_bar(stat = "identity",width=0.5,show.legend=FALSE)+labs(x="Frequency",y="",title="Education frequncy of Audience")+ scale_fill_manual(name = "Education", values=c("red","grey50"))
+```
+
+
+Highest education frequency is for **Bachelors degree**
+
+```{r  echo=TRUE,eval=TRUE}
+df_loc<-df_fe%>%filter(!is.na(Location..Census.Region.)) %>% group_by(Location..Census.Region.) %>% summarize(pop=n())
+ggplot(df_loc,aes(x=pop,y=reorder(Location..Census.Region.,-pop), fill=factor(ifelse(Location..Census.Region.=="Pacific","Highlighted","Normal"))))+geom_bar(stat = "identity",width=0.5,show.legend=FALSE)+labs(x="No of People",y="",title="Population of different Region")+ scale_fill_manual(name = "Location", values=c("red","grey50"))
+```
+
+
+Most people are from the **Pacific** region.

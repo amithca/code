@@ -1,0 +1,12 @@
+name: test1
+title: test1
+username: amithca
+account: amithca
+server: 14.139.175.196
+hostUrl: http://14.139.175.196:3939/__api__
+appId: 26
+bundleId: 41
+url: http://14.139.175.196:3939/content/26/
+when: 1599384252.6356
+asMultiple: FALSE
+asStatic: FALSE

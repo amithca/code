@@ -1,0 +1,25 @@
+---
+title: "2020MSC120003_Lab_06Sep2020"
+author: "AmithCA"
+date: "06/09/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lab test
+
+
+## R mark down
+
+You can also embed plots, for example:
+
+```{r pressure, echo=TRUE,eval=TRUE}
+x<-10
+x<=x*100
+x
+```
+
+test success

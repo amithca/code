@@ -1,0 +1,12 @@
+name: 2020mcs120003_miniproject
+title: 2020MCS120003_MiniProject
+username: amithca
+account: amithca
+server: 14.139.175.196
+hostUrl: http://14.139.175.196:3939/__api__
+appId: 251
+bundleId: 760
+url: http://14.139.175.196:3939/content/251/
+when: 1605291831.62044
+asMultiple: FALSE
+asStatic: TRUE
