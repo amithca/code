@@ -16,15 +16,21 @@ password = "postgres"
 # General Parameters
 genPar = {
     "cmpcod": 'KE',
-    "fltcaridr": 1180
+    "fltcaridr": 1180,
+    "trf_grpcatcod": 'TARIFF',
+    "min_dcp": 7,
+    "sys_curcod": 'USD'
 }
+# PFM data
+df_PFM = pd.DataFrame()
 
+# Output table
+output_tblnam = "crmfltexprevfct"
 output_tbl_col = ['cmpcod', 'fltnum', 'fltdat', 'segorg', 'segdst', 'awborg', 'awbdst', 'awborgcty', 'awbdstcty',
                   'awborgcnt', 'awbdstcnt', 'awborgreg', 'awbdstreg', 'altidr', 'prdnam', 'gblcuscod', 'catcod',
                   'stncod', 'dow', 'chgwgtfrm', 'chgwgttoo', 'rectyp', 'ratusd', 'othchg', 'fltdmd', 'segprofct',
                   'prdprofct', 'segaltwgt', 'segprdclswgt', 'clswgtper', 'clswgt', 'revusd', 'contrbrto', 'flttyp',
                   'fltrou', 'fltorg', 'fltdst', 'exedat', 'tagidx', 'crmflg', 'crmlstupdtim', 'clsgrswgt', 'clsvolwgt']
-output_tblnam = "crmfltexprevfct"
 output_tbl_pk = ['cmpcod', 'fltnum', 'fltdat', 'segorg', 'segdst', 'awborg', 'awbdst', 'altidr', 'prdnam', 'stncod']
 
 # Execution date
@@ -33,8 +39,9 @@ delta_4W = relativedelta(days=-28)
 delta_1Y = relativedelta(years=-1)
 
 # Specify Custom Execution date
-# exedat = datetime.datetime(2021,6,10)
+exedat = datetime.datetime(2021, 6, 10)
 
+cur_date = exedat.strftime('%Y-%m-%d')
 forcstfrmdat = exedat + relativedelta(days=1)  # Next day
 forcsttoodat = datetime.datetime(int(exedat.strftime('%Y')), int(exedat.strftime('%m')), 1) + relativedelta(
     months=2) + relativedelta(days=-1)  # Last day of next month
@@ -43,7 +50,7 @@ print("Forecast period Start date=", forcstfrmdat)
 print("Forecast period End date=", forcsttoodat)
 
 # Create and Load FRP queries
-qryObj = QryClass(exedat, genPar['cmpcod'], genPar['fltcaridr'])
+qryObj = QryClass(exedat, genPar)
 
 
 def get_Connection(host, port, database, user, password):
@@ -123,7 +130,6 @@ def pop_Segrto(bkgdta):
     histblnam = "crmfltexprevfctsegrtohis"
     tbl_pk = ["cmpcod", "fltnum", "segorg", "segdst"]
     try:
-        cur_date = exedat.strftime('%Y-%m-%d')
         # Get Segment list
         his_dat_4W = exedat + delta_4W
         qry_segrto_seglst = qryObj.query_FRP["qry_segrto_seglst"]
@@ -233,17 +239,32 @@ def pop_Segrto(bkgdta):
         print("Exiting pop_Segrto()")
 
 
-def get_PFM(orgcod, dstcod, con):
-    qry_prm = qryObj.getPFMQry(orgcod, dstcod)
-    df_pfm = pd.read_sql_query(qry_prm, con).convert_dtypes()
-    if len(df_pfm) <= 0:
-        pfm = -1
-    else:
-        pfm = float(df_pfm['profct'])
-    return pfm
+def get_PFM_OD(orgcod, dstcod):
+    v_pfm = -1
+    if len(df_PFM) <= 0:
+        get_PFM()
+    tmp_PFM = df_PFM[(df_PFM["orgcod"] == orgcod) & (df_PFM["dstcod"] == dstcod)]['profct']
+    if len(tmp_PFM) > 0:
+        v_pfm = float(tmp_PFM.iloc[0])
+    return v_pfm
 
 
-def get_Contrbrto(segorg, segdst, traorg, tradst, conn):
+def get_PFM():
+    con = get_Connection(host, port, database, user, password)
+    qry_pfm = qryObj.getQry_PFM()
+    tmp_pfm = pd.read_sql_query(qry_pfm, con).convert_dtypes()
+    if len(tmp_pfm) >= 0:
+        global df_PFM
+        df_PFM = tmp_pfm
+        df_PFM.set_index(["orgcod", "dstcod"])
+    con.close()
+
+
+def get_Contrbrto(segorg, segdst, traorg, tradst):
+    if not segorg:
+        segorg = "-"
+    if not segdst:
+        segdst = "-"
     if not traorg:
         traorg = "-"
     if not tradst:
@@ -252,9 +273,9 @@ def get_Contrbrto(segorg, segdst, traorg, tradst, conn):
     v_pfm_s2 = 0
     v_pfm_s3 = 0
     awm = genPar['awm']
-    v_pfm_s1 = 0 if traorg == segorg else get_PFM(traorg, segorg, conn)
-    v_pfm_s2 = 0 if segorg == segdst else get_PFM(segorg, segdst, conn)
-    v_pfm_s3 = 0 if segdst == tradst else get_PFM(segdst, tradst, conn)
+    v_pfm_s1 = 0 if traorg == segorg else get_PFM_OD(traorg, segorg)
+    v_pfm_s2 = 0 if segorg == segdst else get_PFM_OD(segorg, segdst)
+    v_pfm_s3 = 0 if segdst == tradst else get_PFM_OD(segdst, tradst)
     if v_pfm_s1 == -1 or v_pfm_s2 == -1 or v_pfm_s3 == -1:
         contrbrto = 0
     else:
@@ -267,7 +288,7 @@ def get_Contrbrto(segorg, segdst, traorg, tradst, conn):
 
 def get_cgocap(fltnum, fltdat, conn):
     density_factor = genPar['density_factor']
-    qry_cgocap = qryObj.getCgocapQry(fltnum, fltdat, density_factor)
+    qry_cgocap = qryObj.getQry_Cgocap(fltnum, fltdat, density_factor)
     cgocap = float(pd.read_sql_query(qry_cgocap, conn).convert_dtypes()['cgocapwgt'])
     return cgocap
 
@@ -284,21 +305,83 @@ def create_alt_gblcus(df_bkg):
     rectyp = 'ALTGBLCUS'
     try:
         conn = get_Connection(host, port, database, user, password)
-        qry_ins_AltGblcus = qryObj.get_insQry_AltGblcus(forcstfrmdat, forcsttoodat)
+        qry_ins_AltGblcus = qryObj.getQry_ins_AltGblcus(forcstfrmdat, forcsttoodat)
         df_altlst_gblcus = pd.read_sql_query(qry_ins_AltGblcus, conn, parse_dates=['fltdat']).convert_dtypes()
-        conn.close()
 
         df_altlst_gblcus['dow'] = df_altlst_gblcus['fltdat'].apply(get_dow)
-        df_altlst_gblcus.loc[:, 'exedat'] = exedat.strftime('%Y-%m-%d')
+        df_altlst_gblcus.loc[:, 'chgwgtfrm'] = 0
+        df_altlst_gblcus.loc[:, 'rectyp'] = rectyp
+        df_altlst_gblcus.loc[:, 'chgwgttoo'] = 0
+        df_altlst_gblcus.loc[:, 'exedat'] = cur_date
+        df_altlst_gblcus.loc[:, 'crmlstupdtim'] = datetime.datetime.now().strftime('%d-%b-%Y %H:%M:%S')
 
-        print('Global customer allotment list:\ndf_altlst_gblcus.head=\n', df_altlst_gblcus.head())
-        print('df_altlst_gblcus.columns=\n', df_altlst_gblcus.columns)
-        print('df_altlst_gblcus.count=\n', len(df_altlst_gblcus))
+        # Default values for fillna
+        def_values = {
+            'cmpcod': genPar['cmpcod'], 'segorg': "-", 'segdst': "-", 'awborg': "-", 'awbdst': "-", 'awborgcty': "-",
+            'awbdstcty': "-",
+            'awborgcnt': "-", 'awbdstcnt': "-", 'awborgreg': "-", 'awbdstreg': "-", 'altidr': "-", 'chgwgtfrm': 0,
+            'chgwgttoo': 0, 'ratusd': -1, 'othchg': -1, 'fltdmd': -1, 'segprofct': -1,
+            'prdprofct': -1, 'segaltwgt': 0, 'segprdclswgt': 0, 'clswgtper': -1, 'clswgt': -1, 'revusd': -1,
+            'contrbrto': 1, 'tagidx': 0, 'crmflg': "I", 'clsgrswgt': 0, 'clsvolwgt': 0
+        }
+        df_altlst_gblcus = df_altlst_gblcus.fillna(value=def_values)
+
+        # print('Global customer allotment list:\ndf_altlst_gblcus.head=\n', df_altlst_gblcus.head())
+        # print('df_altlst_gblcus.columns=\n', df_altlst_gblcus.columns)
+        # print('df_altlst_gblcus.count=\n', len(df_altlst_gblcus))
 
         # Clear pervious execution overlap records from output table
-        # df_altlst_gblcus = df_altlst_gblcus[output_tbl_col]
-        # clear_oldresult(rectyp, forcstfrmdat, forcsttoodat)
-        # write_to_postgre(df_altlst_gblcus, output_tbl_pk, output_tblnam)
+        df_altlst_gblcus = df_altlst_gblcus[output_tbl_col]
+        clear_oldresult(rectyp, forcstfrmdat, forcsttoodat)
+        #Write GBLCUS allotment list to output table
+        write_to_postgre(df_altlst_gblcus, output_tbl_pk, output_tblnam)
+
+        # Find net rate and other charge
+
+        qry_alt_gblcus_netrat = qryObj.query_FRP['qry_alt_gblcus_netrat']
+        # print("qry_alt_gblcus_netrat=", qry_alt_gblcus_netrat)
+        df_alt_gblcus_rat = pd.read_sql_query(qry_alt_gblcus_netrat, conn, parse_dates=['fltdat']).convert_dtypes()
+        if len(df_alt_gblcus_rat) > 0:
+            df_alt_gblcus_rat.loc[:, 'rectyp'] = rectyp
+            df_alt_gblcus_rat.fillna(value={"ratusd": 0})
+            ind = ["cmpcod", "fltnum", "fltdat", "altidr", "stncod", "exedat", "rectyp"]
+            df_altlst_gblcus.drop(['ratusd'])
+            df_altlst_gblcus = df_altlst_gblcus.merge(df_alt_gblcus_rat, on=ind, how='left')
+            df_altlst_gblcus = df_altlst_gblcus[output_tbl_col]
+
+            # print('Global customer allotment list:\ndf_altlst_gblcus.head=\n',
+            #       df_altlst_gblcus[["fltnum", "fltdat", "segorg", "segdst", "awborg", "awbdst", "ratusd"]].head())
+            # print('df_altlst_gblcus.columns=\n', df_altlst_gblcus.columns)
+            # print('df_altlst_gblcus.count=\n', len(df_altlst_gblcus))
+
+        else:
+            print("Cannot find ALT - GBLCUS rate cards!!!")
+
+        # Find rate from historical data for allotments with traorg and tradst as null
+
+        tmp_altlst = df_altlst_gblcus[(df_altlst_gblcus["awborg"] == "-") & (df_altlst_gblcus["awbdst"] == "-")][
+            'altidr'].unique()
+        if len(tmp_altlst) > 0:
+            last_month_start = datetime.datetime(int(exedat.strftime('%Y')), int(exedat.strftime('%m')),
+                                                 1) + relativedelta(months=-2) + relativedelta(days=1)
+            last_month_end = datetime.datetime(int(exedat.strftime('%Y')), int(exedat.strftime('%m')),
+                                               1) + relativedelta(days=-1)
+            df_bkg_1M = df_bkg.loc[(df_bkg['fltdat'] >= last_month_start) & (df_bkg['fltdat'] <= last_month_end)]
+            df_bkg_1M = df_bkg_1M[df_bkg_1M['altidr'].isin(tmp_altlst)]
+            df_bkg_1M['contrbrto'] = df_bkg_1M.apply(
+                lambda x: get_Contrbrto(x['segorgcty'], x['segdstcty'], x['awborgcty'], x['awbdstcty']), axis=1)
+            df_bkg_1M["grsrev"] = (df_bkg_1M["grsrevusdshp"] - (df_bkg_1M["fltratusd"] * df_bkg_1M["chgwgt"])) * \
+                                  df_bkg_1M["contrbrto"]
+            tmp_sumrev = df_bkg_1M.groupby(["cmpcod", "fltnum", "segorg", "segdst", "gblcuscod"])[
+                'grsrev'].sum().reset_index()
+            tmp_sumchgwgt = df_bkg_1M.groupby(["cmpcod", "fltnum", "segorg", "segdst", "gblcuscod"])[
+                'chgwgt'].sum().reset_index()
+            tmp_alt = df_altlst_gblcus[
+                (df_altlst_gblcus["awborg"] == "-") & (df_altlst_gblcus["awbdst"] == "-")].set_index(
+                ["cmpcod", "fltnum", "segorg", "segdst", "gblcuscod"])
+            tmp_alt.loc[:, 'ratusd'] = tmp_sumrev["grsrev"] / tmp_sumchgwgt["chgwgt"]
+
+
 
 
     except Exception as e:
@@ -308,20 +391,27 @@ def create_alt_gblcus(df_bkg):
         print("Exiting create_alt_gblcus()")
 
 
+def create_alt_prd(df_bkg):
+    pass
+
+
 if __name__ == '__main__':
     try:
         print("Inside main")
         get_gen_paramters()
         # Load 1 year Booking data
         qry_bkg_1Y = qryObj.query_FRP["qry_bkg_1Y"]
+        print(qry_bkg_1Y)
         conn = get_Connection(host, port, database, user, password)
         df_bkg = pd.read_sql_query(qry_bkg_1Y, conn, parse_dates=['fltdat']).convert_dtypes()
+        df_bkg = df_bkg.fillna({"segorgcty": "-", "segdstcty": "-", "awborgcty": "-", "awbdstcty": "-"})
         print("1Y Booking record count: ", len(df_bkg))
-
         # Populate Segment ratio table
         pop_Segrto(df_bkg)
-        # Populate Global customer allotment in output tabe
+        # Populate Global customer allotment in output table
         create_alt_gblcus(df_bkg)
+        # Populate Product allotment in output table
+        create_alt_prd(df_bkg)
 
         conn.close()
     except Exception as e:
